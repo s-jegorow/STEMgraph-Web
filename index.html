@@ -3,103 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D STEMgraph Demokram</title>
+  <title>3D STEMgraph Webkram</title>
   <script src="https://unpkg.com/3d-force-graph"></script>
-  <style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #000;
-    font-family: sans-serif;
-  }
-
-  #graph-container {
-    width: 100vw;
-    height: 100vh;
-  }
-
-  h1 {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    color: #ddd;
-    font-size: 24px;
-    z-index: 10;
-  }
-#menue {
-  position: absolute;
-  top: 60px;
-  left: 10px;
-  width: 320px;
-  background: rgba(30, 30, 30, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 12px 16px;
-  color: #ddd;
-  font-size: 16px;
-  z-index: 10;
-  backdrop-filter: blur(4px);
-}
-
-</style>
-	h1 { position: absolute; z-index: 10; color: white; margin: 10px; font-family: sans-serif; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>The STEMgraph</h1>
-  	<div id="menue">Hey du, na?! Hier kommt ein Menü oder so hin.</div>
-	<div id="graph-container"></div>
+  <h1>STEMgraph Web</h1>
 
-  <script>
-	/* wird gerade als Datei geholt, in Zukunft API-Endpoint */
-    fetch("./jsonld.json")
-      .then(response => response.json())
-      .then(data => {
-        const nodes = [];
-        const links = [];
-        const seen = new Set();
+<div id="menue">
+  Willkommen zum STEMgraph. Such dir ein Ziel aus.
+  <br>
+  <br>
+  <br>
+  <a href="http://localhost:8010">Ganzer Graph</a>
+  <a href="#" id="btn-show-keywords">Alle Keywords anzeigen</a>
+  <br>
+  <form id="search-form">
+    <input type="text" id="keywordsearch" placeholder="Keyword suchen…" required>
+    <button type="submit">Suchen</button>
+  </form>
+</div>
 
-        /* anpassung an graph-format mit nodes und links */
-	data["@graph"].forEach(item => {
-          const id = item["@id"];
-          if (!seen.has(id)) {
-            nodes.push({
-              id: id,
-              name: id,
-              repo_link: "https://github.com/STEMgraph/" + id
-            });
-            seen.add(id);
-          }
-          (item["isBasedOn"] || []).forEach(target => {
-            links.push({ source: id, target: target });
-            if (!seen.has(target)) {
-              nodes.push({
-                id: target,
-                name: target,
-                repo_link: "https://github.com/STEMgraph/" + target
-              });
-              seen.add(target);
-            }
-          });
-        });
+  <div id="graph-container"></div>
+  
+  
+  <div id="node-modal" class="hidden">
+    <div class="modal-content">
+      <button id="btn-close">×</button>
+      <h3 id="modal-title">Topic</h3>
+      <div id="modal-meta">
+        <div class="meta-item">
+          <span class="meta-label">ID:</span>
+          <span id="modal-id"></span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Keywords:</span>
+          <div id="modal-keywords"></div>
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button id="btn-explore">Graphabschnitt erkunden</button>
+        <button id="btn-github">Lektion öffnen</button>
+      </div>
+    </div>
+  </div>
 
-        const graphData = { nodes, links };
-
-
-
-        const Graph = ForceGraph3D()(document.getElementById("graph-container"))
-          .graphData(graphData)
-          .nodeLabel(node => node.name)               
-          .nodeAutoColorBy("id")
-          .linkDirectionalParticles(2)
-          .linkDirectionalParticleSpeed(0.01)
-          .onNodeClick(node => {                      
-            if (node.repo_link && node.repo_link !== "unknown") {
-              window.open(node.repo_link, "_blank");
-            }
-          });
-      })
-      .catch(error => console.error("Fehler beim Laden:", error));
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
