@@ -23,6 +23,6 @@
 - ESC to exit the node-details
 
 ## To-Do
-- topic search
-- custom user experience
-- learnpath-customizer
+- Topic search
+- Custom user experience
+- Learnpath-Customizer
