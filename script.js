@@ -11,12 +11,12 @@ const modalKeywords = document.getElementById('modal-keywords');
 const btnExplore = document.getElementById('btn-explore');
 const btnGithub = document.getElementById('btn-github');
 const btnClose = document.getElementById('btn-close');
-const btnBack = document.getElementById('btn-back');
 const searchForm = document.getElementById('search-form');
 const keywordInput = document.getElementById('keywordsearch');
 const resetLink = document.getElementById('reset-graph');
 const btnShowKeywords = document.getElementById('btn-show-keywords');
 const btnShowKeywordCloud = document.getElementById('btn-show-keywordcloud');
+const btnBack = document.getElementById('btn-back');
 const btnZoomReset = document.getElementById('btn-zoom-reset');
 
 
@@ -44,37 +44,6 @@ function closeModal() {
   currentNode = null;
 }
 
-/* history management */
-function pushHistory(apiUrl) {
-  graphHistory.push(apiUrl);
-  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
-  updateBackButton();
-}
-
-/* schritt zurück */
-
-function goBack() {
-  if (graphHistory.length <= 1) return;
-  
-  graphHistory.pop(); // aktuellen entfernen
-  const previousUrl = graphHistory[graphHistory.length - 1];
-  
-  if (previousUrl) {
-    loadGraph(previousUrl, false); // false = nicht zur history hinzufügen
-  }
-  
-  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
-  updateBackButton();
-}
-
-function updateBackButton() {
-  if (graphHistory.length <= 1) {
-    btnBack.classList.add('disabled');
-  } else {
-    btnBack.classList.remove('disabled');
-  }
-}
-
 /* api-response parsen */
 function parseGraphData(data) {
   const nodes = [];
@@ -87,6 +56,7 @@ function parseGraphData(data) {
     const id = item["@id"];
     
     if (!seen.has(id)) {
+
       const node = {
         id: id,
         name: id,
@@ -94,10 +64,13 @@ function parseGraphData(data) {
         teaches: item["teaches"] || null,
         keywords: item["keywords"] || []
       };
+
       nodes.push(node);
       nodeMap.set(id, node);
       seen.add(id);
+
     } else {
+
       const existingNode = nodeMap.get(id);
       if (item["teaches"]) existingNode.teaches = item["teaches"];
       if (item["keywords"] && item["keywords"].length > 0) existingNode.keywords = item["keywords"];
@@ -108,6 +81,7 @@ function parseGraphData(data) {
       links.push({ source: id, target: targetId });
       
       if (!seen.has(targetId)) {
+
         const node = {
           id: targetId,
           name: targetId,
@@ -115,6 +89,7 @@ function parseGraphData(data) {
           teaches: typeof target === 'object' ? target["teaches"] : null,
           keywords: typeof target === 'object' ? (target["keywords"] || []) : []
         };
+
         nodes.push(node);
         nodeMap.set(targetId, node);
         seen.add(targetId);
@@ -130,19 +105,27 @@ function parseGraphData(data) {
   return { nodes, links };
 }
 
+/* history management */
+function pushHistory(apiUrl) {
+  graphHistory.push(apiUrl);
+  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
+  updateBackButton();
+}
+
 /* graph mit den geparsten daten laden*/
 function loadGraph(url, addToHistory = true) {
+
+  if (addToHistory) {
+    pushHistory(url);
+  }
+
   fetch(url)
     .then(response => response.json())
     .then(data => {
       const graphData = parseGraphData(data);
       Graph.nodeVal(() => 1);
       Graph.graphData(graphData);
-      Graph.zoomToFit(400);  // automatisch zoom+position anpassen
-      
-      if (addToHistory) {
-        pushHistory(url);
-      }
+      Graph.nodeAutoColorBy("id");
     })
     .catch(error => {
       console.error("Fehler beim Laden:", error);
@@ -152,20 +135,34 @@ function loadGraph(url, addToHistory = true) {
 
 /* event-listener für modal-buttons */
 btnClose.addEventListener('click', closeModal);
-
-btnBack.addEventListener('click', (e) => {
-  e.preventDefault();
-  goBack();
-});
-
 btnExplore.addEventListener('click', () => {
   if (!currentNode) return;
   
   /* api-call zum subgraph + neuaufbau*/
   const apiUrl = `http://localhost:8000/getPathToExercise/${currentNode.id}`;
   
-  loadGraph(apiUrl, true);
-  closeModal();
+  pushHistory(apiUrl);
+
+  fetch(apiUrl)
+    .then(response => response.json())
+    .then(data => {
+      if (!data["@graph"]) {
+        alert("Keine Daten für diesen Node gefunden!");
+        closeModal();
+        return;
+      }
+      const graphData = parseGraphData(data);
+
+      Graph.nodeVal(() => 1);
+      Graph.nodeAutoColorBy('id');
+      Graph.graphData(graphData);
+
+      closeModal();
+    })
+    .catch(error => {
+      console.error("Fehler beim Laden des Subgraphen:", error);
+      alert("Konnte Subgraph nicht laden.");
+    });
 });
 
 btnGithub.addEventListener('click', () => {
@@ -180,36 +177,34 @@ searchForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const keyword = keywordInput.value.trim();
   if (keyword) {
-    loadGraph(`http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(keyword)}`);
+    const url = `http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(keyword)}`;
+    pushHistory(url);
+    loadGraph(url, false);
   }
 });
 
 /* keyword-graph anzeigen */
 btnShowKeywords.addEventListener('click', (e) => {
   e.preventDefault();
-  const apiUrl = 'http://localhost:8000/getKeywordList';
-  
-  fetch(apiUrl)
+  const url = 'http://localhost:8000/getKeywordList';
+  pushHistory(url);
+
+  fetch(url)
     .then(response => response.json())
     .then(data => {
       const keywords = data.keywords || [];
       
-      /* nodes für jedes keyword */
       const nodes = keywords.map(keyword => ({
         id: keyword,
         name: keyword,
         isKeyword: true
       }));
       
-      /* keine links bei keywords! */
       const graphData = { nodes, links: [] };
       
-      /* nodeval einführen für die nodegrößen */
       Graph.nodeVal(() => 1);
       Graph.graphData(graphData);
-      Graph.zoomToFit(400);  // automatisch zentrieren
-      
-      pushHistory(apiUrl);
+      Graph.nodeAutoColorBy("id");
     })
     .catch(error => {
       console.error("Fehler beim Laden der Keywords:", error);
@@ -220,30 +215,26 @@ btnShowKeywords.addEventListener('click', (e) => {
 /* keyword cloud anzeigen */
 btnShowKeywordCloud.addEventListener('click', (e) => {
   e.preventDefault();
-  const apiUrl = 'http://localhost:8000/getKeywordCount';
-  
-  fetch(apiUrl)
+  const url = 'http://localhost:8000/getKeywordCount';
+  pushHistory(url);
+
+  fetch(url)
     .then(response => response.json())
     .then(data => {
       const keywordCounts = data.keywords || {};
       
-      /* erstelle nodes mit val für größe basierend auf count */
       const nodes = Object.entries(keywordCounts).map(([keyword, count]) => ({
         id: keyword,
         name: keyword,
-        val: Math.pow(count, 3),  // gerade auf kubik gesetzt
+        val: Math.pow(count, 3),
         isKeyword: true
       }));
       
-      /* auch hier keine links */
       const graphData = { nodes, links: [] };
       
-      /* setze nodeVal BEVOR graphData geladen wird - DONT TOUCH THIS */
       Graph.nodeVal(node => node.val || 1);
       Graph.graphData(graphData);
-      Graph.zoomToFit(400, 200);  // automatischer zoom
-      
-      pushHistory(apiUrl);
+      Graph.nodeAutoColorBy("id");
     })
     .catch(error => {
       console.error("Fehler beim Laden der Keyword Cloud:", error);
@@ -251,19 +242,49 @@ btnShowKeywordCloud.addEventListener('click', (e) => {
     });
 });
 
-/* zoom reset */
+/* zoom reset button */
 btnZoomReset.addEventListener('click', (e) => {
   e.preventDefault();
-  Graph.zoomToFit(400, 200); 
+  if (Graph) {
+    Graph.zoomToFit(400);
+  }
+});
+
+/* schritt zurück */
+function goBack() {
+  if (graphHistory.length <= 1) return;
+  
+  graphHistory.pop();
+  const previousUrl = graphHistory[graphHistory.length - 1];
+  
+  if (previousUrl) {
+    loadGraph(previousUrl, false);
+  }
+  
+  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
+  updateBackButton();
+}
+
+function updateBackButton() {
+  if (graphHistory.length <= 1) {
+    btnBack.classList.add('disabled');
+  } else {
+    btnBack.classList.remove('disabled');
+  }
+}
+
+btnBack.addEventListener('click', (e) => {
+  e.preventDefault();
+  goBack();
 });
 
 /* initialer load des kompletten graphs von der api */
-const initialUrl = "http://localhost:8000/getWholeGraph";
+const firstUrl = "http://localhost:8000/getWholeGraph";
+pushHistory(firstUrl);
 
-fetch(initialUrl)
+fetch(firstUrl)
   .then(response => response.json())
   .then(data => {
-    /* anpassung an graph-format mit nodes und links */
     const graphData = parseGraphData(data);
 
     Graph = ForceGraph3D()(document.getElementById("graph-container"))
@@ -277,25 +298,33 @@ fetch(initialUrl)
 
         /* keyword-nodes triggern suche, normale nodes öffnen modal */
         if (node.isKeyword) {
-          loadGraph(`http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(node.name)}`);
+          const url = `http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(node.name)}`;
+          pushHistory(url);
+          loadGraph(url, false);
         } else {
           openModal(node);
         }
       });
-    
-    /* initialen graph zur history hinzufügen */
-    pushHistory(initialUrl);
-  })
-  .catch(error => console.error("Fehler beim Laden:", error));
 
-/* keyword autocomplete vorbereiten */
-fetch('http://localhost:8000/getKeywordList')
-  .then(response => response.json())
-  .then(data => {
-    const datalist = document.getElementById('keyword-suggestions');
-    (data.keywords || []).forEach(keyword => {
-      const option = document.createElement('option');
-      option.value = keyword;
-      datalist.appendChild(option);
-    });
-  });
+    updateBackButton();
+  })
+  .catch(error => console.error("Fehler:s", error));
+
+
+document.addEventListener('keydown', (e) => {
+
+  if (!modal.classList.contains('hidden') && e.key === 'Escape') {
+    closeModal();
+  }
+
+  if (modal.classList.contains('hidden') && e.key === ' ') {
+    e.preventDefault();
+    btnZoomReset.click();
+  }
+
+  if (modal.classList.contains('hidden') && e.key === 'ArrowLeft') {
+    e.preventDefault();
+    btnBack.click();
+  }
+
+});
