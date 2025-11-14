@@ -16,3 +16,13 @@
 - **Visualization**: [3d-force-graph](https://github.com/vasturiano/3d-force-graph)
 - **API**: FastAPI (STEMgraph-API)
 
+## Keyboard Bindings
+
+- LEFTARROW to go one step back
+- SPACE to reset the view automatically
+- ESC to exit the node-details
+
+## To-Do
+- topic search
+- custom user experience
+- learnpath-customizer
