@@ -1,5 +1,7 @@
 let Graph;
 let currentNode = null;
+localStorage.removeItem('graphHistory'); /* Fix für Reload */
+let graphHistory = [];
 
 /* modal- und search-elemente zuordnen */
 const modal = document.getElementById('node-modal');
@@ -9,11 +11,13 @@ const modalKeywords = document.getElementById('modal-keywords');
 const btnExplore = document.getElementById('btn-explore');
 const btnGithub = document.getElementById('btn-github');
 const btnClose = document.getElementById('btn-close');
+const btnBack = document.getElementById('btn-back');
 const searchForm = document.getElementById('search-form');
 const keywordInput = document.getElementById('keywordsearch');
 const resetLink = document.getElementById('reset-graph');
 const btnShowKeywords = document.getElementById('btn-show-keywords');
 const btnShowKeywordCloud = document.getElementById('btn-show-keywordcloud');
+const btnZoomReset = document.getElementById('btn-zoom-reset');
 
 
 /* modal kram*/
@@ -38,6 +42,37 @@ function openModal(node) {
 function closeModal() {
   modal.classList.add('hidden');
   currentNode = null;
+}
+
+/* history management */
+function pushHistory(apiUrl) {
+  graphHistory.push(apiUrl);
+  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
+  updateBackButton();
+}
+
+/* schritt zurück */
+
+function goBack() {
+  if (graphHistory.length <= 1) return;
+  
+  graphHistory.pop(); // aktuellen entfernen
+  const previousUrl = graphHistory[graphHistory.length - 1];
+  
+  if (previousUrl) {
+    loadGraph(previousUrl, false); // false = nicht zur history hinzufügen
+  }
+  
+  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
+  updateBackButton();
+}
+
+function updateBackButton() {
+  if (graphHistory.length <= 1) {
+    btnBack.classList.add('disabled');
+  } else {
+    btnBack.classList.remove('disabled');
+  }
 }
 
 /* api-response parsen */
@@ -96,13 +131,18 @@ function parseGraphData(data) {
 }
 
 /* graph mit den geparsten daten laden*/
-function loadGraph(url) {
+function loadGraph(url, addToHistory = true) {
   fetch(url)
     .then(response => response.json())
     .then(data => {
       const graphData = parseGraphData(data);
       Graph.nodeVal(() => 1);
       Graph.graphData(graphData);
+      Graph.zoomToFit(400);  // automatisch zoom+position anpassen
+      
+      if (addToHistory) {
+        pushHistory(url);
+      }
     })
     .catch(error => {
       console.error("Fehler beim Laden:", error);
@@ -112,28 +152,20 @@ function loadGraph(url) {
 
 /* event-listener für modal-buttons */
 btnClose.addEventListener('click', closeModal);
+
+btnBack.addEventListener('click', (e) => {
+  e.preventDefault();
+  goBack();
+});
+
 btnExplore.addEventListener('click', () => {
   if (!currentNode) return;
   
   /* api-call zum subgraph + neuaufbau*/
   const apiUrl = `http://localhost:8000/getPathToExercise/${currentNode.id}`;
   
-  fetch(apiUrl)
-    .then(response => response.json())
-    .then(data => {
-      if (!data["@graph"]) {
-        alert("Keine Daten für diesen Node gefunden!");
-        closeModal();
-        return;
-      }
-      Graph.nodeVal(() => 1);
-      Graph.graphData(parseGraphData(data));
-      closeModal();
-    })
-    .catch(error => {
-      console.error("Fehler beim Laden des Subgraphen:", error);
-      alert("Konnte Subgraph nicht laden.");
-    });
+  loadGraph(apiUrl, true);
+  closeModal();
 });
 
 btnGithub.addEventListener('click', () => {
@@ -155,7 +187,9 @@ searchForm.addEventListener('submit', (e) => {
 /* keyword-graph anzeigen */
 btnShowKeywords.addEventListener('click', (e) => {
   e.preventDefault();
-  fetch('http://localhost:8000/getKeywordList')
+  const apiUrl = 'http://localhost:8000/getKeywordList';
+  
+  fetch(apiUrl)
     .then(response => response.json())
     .then(data => {
       const keywords = data.keywords || [];
@@ -170,9 +204,12 @@ btnShowKeywords.addEventListener('click', (e) => {
       /* keine links bei keywords! */
       const graphData = { nodes, links: [] };
       
-      /* nodeval einführen für die größen */
+      /* nodeval einführen für die nodegrößen */
       Graph.nodeVal(() => 1);
       Graph.graphData(graphData);
+      Graph.zoomToFit(400);  // automatisch zentrieren
+      
+      pushHistory(apiUrl);
     })
     .catch(error => {
       console.error("Fehler beim Laden der Keywords:", error);
@@ -183,7 +220,9 @@ btnShowKeywords.addEventListener('click', (e) => {
 /* keyword cloud anzeigen */
 btnShowKeywordCloud.addEventListener('click', (e) => {
   e.preventDefault();
-  fetch('http://localhost:8000/getKeywordCount')
+  const apiUrl = 'http://localhost:8000/getKeywordCount';
+  
+  fetch(apiUrl)
     .then(response => response.json())
     .then(data => {
       const keywordCounts = data.keywords || {};
@@ -202,6 +241,9 @@ btnShowKeywordCloud.addEventListener('click', (e) => {
       /* setze nodeVal BEVOR graphData geladen wird - DONT TOUCH THIS */
       Graph.nodeVal(node => node.val || 1);
       Graph.graphData(graphData);
+      Graph.zoomToFit(400, 200);  // automatischer zoom
+      
+      pushHistory(apiUrl);
     })
     .catch(error => {
       console.error("Fehler beim Laden der Keyword Cloud:", error);
@@ -209,8 +251,16 @@ btnShowKeywordCloud.addEventListener('click', (e) => {
     });
 });
 
+/* zoom reset */
+btnZoomReset.addEventListener('click', (e) => {
+  e.preventDefault();
+  Graph.zoomToFit(400, 200); 
+});
+
 /* initialer load des kompletten graphs von der api */
-fetch("http://localhost:8000/getWholeGraph")
+const initialUrl = "http://localhost:8000/getWholeGraph";
+
+fetch(initialUrl)
   .then(response => response.json())
   .then(data => {
     /* anpassung an graph-format mit nodes und links */
@@ -232,5 +282,20 @@ fetch("http://localhost:8000/getWholeGraph")
           openModal(node);
         }
       });
+    
+    /* initialen graph zur history hinzufügen */
+    pushHistory(initialUrl);
   })
   .catch(error => console.error("Fehler beim Laden:", error));
+
+/* keyword autocomplete vorbereiten */
+fetch('http://localhost:8000/getKeywordList')
+  .then(response => response.json())
+  .then(data => {
+    const datalist = document.getElementById('keyword-suggestions');
+    (data.keywords || []).forEach(keyword => {
+      const option = document.createElement('option');
+      option.value = keyword;
+      datalist.appendChild(option);
+    });
+  });

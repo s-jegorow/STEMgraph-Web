@@ -11,17 +11,30 @@
   <h1>STEMgraph Web</h1>
 
   
-  <div id="menue">
-  Willkommen zum STEMgraph. Such dir ein Ziel aus.
+  <div id="menu">
+  Welcome to STEMgraph. Choose your destination.
   </br>
-  <a href="http://localhost:8010">Ganzer Graph</a>
-  <a href="#" id="btn-show-keywords">Alle Keywords anzeigen</a>
+  <a href="http://localhost:8010">Whole Graph</a>
+  <a href="#" id="btn-show-keywords">Keywords</a>
   <a href="#" id="btn-show-keywordcloud">Keyword Cloud</a>
 <form id="search-form">
-    <input type="text" id="keywordsearch" placeholder="Keyword suchen…" required>
-    <button type="submit">Suchen</button>
+    <input type="text" id="keywordsearch" list="keyword-suggestions" placeholder="Find Keyword" required>
+    <datalist id="keyword-suggestions"></datalist>
+    <button type="submit">Search</button>
   </form>
-
+<div id="menu-bottom">
+  <table id="menu-table">
+    <tr>
+      <td style="width: 40%; text-align: left;">
+        <a href="#" id="btn-back" class="disabled">←Back</a> 
+      </td>
+      <td style="width: 40%; text-align: right;">
+               <a href="#" id="btn-zoom-reset">Reset</a>
+      </td>
+      <td style="width: 20%;; test-align: right"></td>
+    </tr>
+  </table>
+</div>
   </div>
   <div id="graph-container"></div>
   
