@@ -16,8 +16,13 @@
 - **Visualization**: [3d-force-graph](https://github.com/vasturiano/3d-force-graph)
 - **API**: FastAPI (STEMgraph-API)
 
-## Keyboard Bindings
+## Usage 
+Have fun discovering the STEMgraph, a Cloud of all Keywords or search for a certain Keyword.
 
+- Query Parameter to directly access nodes with their dependencies: index.html?node=uuid
+- Query Parameter to directly access nodes with a certain keyword: index.html?keyword=keyword
+
+## Keyboard-Bindings
 - LEFTARROW to go one step back
 - SPACE to reset the view automatically
 - ESC to exit the node-details

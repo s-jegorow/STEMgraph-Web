@@ -1,7 +1,6 @@
 let Graph;
-let currentNode = null;
-localStorage.removeItem('graphHistory'); /* Fix für Reload */
 let graphHistory = [];
+let currentNode = null;
 
 /* modal- und search-elemente zuordnen */
 const modal = document.getElementById('node-modal');
@@ -11,13 +10,44 @@ const modalKeywords = document.getElementById('modal-keywords');
 const btnExplore = document.getElementById('btn-explore');
 const btnGithub = document.getElementById('btn-github');
 const btnClose = document.getElementById('btn-close');
+const btnBack = document.getElementById('btn-back');
 const searchForm = document.getElementById('search-form');
 const keywordInput = document.getElementById('keywordsearch');
 const resetLink = document.getElementById('reset-graph');
 const btnShowKeywords = document.getElementById('btn-show-keywords');
 const btnShowKeywordCloud = document.getElementById('btn-show-keywordcloud');
-const btnBack = document.getElementById('btn-back');
 const btnZoomReset = document.getElementById('btn-zoom-reset');
+
+
+/* history funktionen */
+function initHistory() {
+  graphHistory = [];
+  localStorage.removeItem('graphHistory');
+  updateBackButton();
+}
+
+function updateBackButton() {
+  if (graphHistory.length <= 1) {
+    btnBack.classList.add('disabled');
+  } else {
+    btnBack.classList.remove('disabled');
+  }
+}
+
+function pushHistory(apiUrl) {
+  graphHistory.push(apiUrl);
+  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
+  updateBackButton();
+}
+
+function goBack() {
+  if (graphHistory.length <= 1) return;
+  graphHistory.pop();
+  const previousUrl = graphHistory[graphHistory.length - 1];
+  if (previousUrl) loadGraph(previousUrl, false);
+  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
+  updateBackButton();
+}
 
 
 /* modal kram*/
@@ -44,125 +74,23 @@ function closeModal() {
   currentNode = null;
 }
 
-/* api-response parsen */
-function parseGraphData(data) {
-  const nodes = [];
-  const links = [];
-  const seen = new Set();
-  const nodeMap = new Map();
-  const graphItems = Array.isArray(data["@graph"]) ? data["@graph"] : [data["@graph"]];
-
-  function processItem(item) {
-    const id = item["@id"];
-    
-    if (!seen.has(id)) {
-
-      const node = {
-        id: id,
-        name: id,
-        repo_link: "https://github.com/STEMgraph/" + id,
-        teaches: item["teaches"] || null,
-        keywords: item["keywords"] || []
-      };
-
-      nodes.push(node);
-      nodeMap.set(id, node);
-      seen.add(id);
-
-    } else {
-
-      const existingNode = nodeMap.get(id);
-      if (item["teaches"]) existingNode.teaches = item["teaches"];
-      if (item["keywords"] && item["keywords"].length > 0) existingNode.keywords = item["keywords"];
-    }
-    
-    (item["dependsOn"] || []).forEach(target => {
-      const targetId = typeof target === 'string' ? target : target["@id"];
-      links.push({ source: id, target: targetId });
-      
-      if (!seen.has(targetId)) {
-
-        const node = {
-          id: targetId,
-          name: targetId,
-          repo_link: "https://github.com/STEMgraph/" + targetId,
-          teaches: typeof target === 'object' ? target["teaches"] : null,
-          keywords: typeof target === 'object' ? (target["keywords"] || []) : []
-        };
-
-        nodes.push(node);
-        nodeMap.set(targetId, node);
-        seen.add(targetId);
-      }
-      
-      if (typeof target === 'object' && target["@id"]) {
-        processItem(target);
-      }
-    });
-  }
-
-  graphItems.forEach(item => processItem(item));
-  return { nodes, links };
-}
-
-/* history management */
-function pushHistory(apiUrl) {
-  graphHistory.push(apiUrl);
-  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
-  updateBackButton();
-}
-
-/* graph mit den geparsten daten laden*/
-function loadGraph(url, addToHistory = true) {
-
-  if (addToHistory) {
-    pushHistory(url);
-  }
-
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      const graphData = parseGraphData(data);
-      Graph.nodeVal(() => 1);
-      Graph.graphData(graphData);
-      Graph.nodeAutoColorBy("id");
-    })
-    .catch(error => {
-      console.error("Fehler beim Laden:", error);
-      alert("Konnte Daten nicht laden.");
-    });
-}
 
 /* event-listener für modal-buttons */
 btnClose.addEventListener('click', closeModal);
+
+btnBack.addEventListener('click', (e) => {
+  e.preventDefault();
+  goBack();
+});
+
 btnExplore.addEventListener('click', () => {
   if (!currentNode) return;
   
   /* api-call zum subgraph + neuaufbau*/
   const apiUrl = `http://localhost:8000/getPathToExercise/${currentNode.id}`;
   
-  pushHistory(apiUrl);
-
-  fetch(apiUrl)
-    .then(response => response.json())
-    .then(data => {
-      if (!data["@graph"]) {
-        alert("Keine Daten für diesen Node gefunden!");
-        closeModal();
-        return;
-      }
-      const graphData = parseGraphData(data);
-
-      Graph.nodeVal(() => 1);
-      Graph.nodeAutoColorBy('id');
-      Graph.graphData(graphData);
-
-      closeModal();
-    })
-    .catch(error => {
-      console.error("Fehler beim Laden des Subgraphen:", error);
-      alert("Konnte Subgraph nicht laden.");
-    });
+  loadGraph(apiUrl, true);
+  closeModal();
 });
 
 btnGithub.addEventListener('click', () => {
@@ -172,39 +100,52 @@ btnGithub.addEventListener('click', () => {
   }
 });
 
+
 /* keyword-suche */
 searchForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const keyword = keywordInput.value.trim();
   if (keyword) {
-    const url = `http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(keyword)}`;
-    pushHistory(url);
-    loadGraph(url, false);
+    loadGraph(`http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(keyword)}`);
   }
 });
+
 
 /* keyword-graph anzeigen */
 btnShowKeywords.addEventListener('click', (e) => {
   e.preventDefault();
-  const url = 'http://localhost:8000/getKeywordList';
-  pushHistory(url);
-
-  fetch(url)
+  
+  if (!Graph) {
+    alert('Graph wird noch geladen, bitte warten...');
+    return;
+  }
+  
+  const apiUrl = 'http://localhost:8000/getKeywordList';
+  
+  fetch(apiUrl)
     .then(response => response.json())
     .then(data => {
       const keywords = data.keywords || [];
       
+      /* nodes für jedes keyword */
       const nodes = keywords.map(keyword => ({
         id: keyword,
         name: keyword,
         isKeyword: true
       }));
       
+      /* keine links bei keywords! */
       const graphData = { nodes, links: [] };
       
+      /* nodeval einführen für die nodegrößen */
       Graph.nodeVal(() => 1);
       Graph.graphData(graphData);
-      Graph.nodeAutoColorBy("id");
+      
+      setTimeout(() => {
+        Graph.zoomToFit(400, 80);
+      }, 100);
+      
+      pushHistory(apiUrl);
     })
     .catch(error => {
       console.error("Fehler beim Laden der Keywords:", error);
@@ -212,29 +153,43 @@ btnShowKeywords.addEventListener('click', (e) => {
     });
 });
 
+
 /* keyword cloud anzeigen */
 btnShowKeywordCloud.addEventListener('click', (e) => {
   e.preventDefault();
-  const url = 'http://localhost:8000/getKeywordCount';
-  pushHistory(url);
-
-  fetch(url)
+  
+  if (!Graph) {
+    alert('Graph wird noch geladen, bitte warten...');
+    return;
+  }
+  
+  const apiUrl = 'http://localhost:8000/getKeywordCount';
+  
+  fetch(apiUrl)
     .then(response => response.json())
     .then(data => {
       const keywordCounts = data.keywords || {};
       
+      /* erstelle nodes mit val für größe basierend auf count */
       const nodes = Object.entries(keywordCounts).map(([keyword, count]) => ({
         id: keyword,
         name: keyword,
-        val: Math.pow(count, 3),
+        val: Math.pow(count, 3),  // gerade auf kubik gesetzt
         isKeyword: true
       }));
       
+      /* auch hier keine links */
       const graphData = { nodes, links: [] };
       
+      /* setze nodeVal BEVOR graphData geladen wird - DONT TOUCH THIS */
       Graph.nodeVal(node => node.val || 1);
       Graph.graphData(graphData);
-      Graph.nodeAutoColorBy("id");
+      
+      setTimeout(() => {
+        Graph.zoomToFit(400, 80);
+      }, 100);
+      
+      pushHistory(apiUrl);
     })
     .catch(error => {
       console.error("Fehler beim Laden der Keyword Cloud:", error);
@@ -242,49 +197,28 @@ btnShowKeywordCloud.addEventListener('click', (e) => {
     });
 });
 
-/* zoom reset button */
+
+/* zoom reset */
 btnZoomReset.addEventListener('click', (e) => {
   e.preventDefault();
-  if (Graph) {
-    Graph.zoomToFit(400);
+  
+  if (!Graph) {
+    return;
   }
+  
+  Graph.zoomToFit(400, 80);
 });
 
-/* schritt zurück */
-function goBack() {
-  if (graphHistory.length <= 1) return;
-  
-  graphHistory.pop();
-  const previousUrl = graphHistory[graphHistory.length - 1];
-  
-  if (previousUrl) {
-    loadGraph(previousUrl, false);
-  }
-  
-  localStorage.setItem('graphHistory', JSON.stringify(graphHistory));
-  updateBackButton();
-}
-
-function updateBackButton() {
-  if (graphHistory.length <= 1) {
-    btnBack.classList.add('disabled');
-  } else {
-    btnBack.classList.remove('disabled');
-  }
-}
-
-btnBack.addEventListener('click', (e) => {
-  e.preventDefault();
-  goBack();
-});
 
 /* initialer load des kompletten graphs von der api */
-const firstUrl = "http://localhost:8000/getWholeGraph";
-pushHistory(firstUrl);
+const initialUrl = "http://localhost:8000/getWholeGraph";
 
-fetch(firstUrl)
+initHistory();
+
+fetch(initialUrl)
   .then(response => response.json())
   .then(data => {
+    /* anpassung an graph-format mit nodes und links */
     const graphData = parseGraphData(data);
 
     Graph = ForceGraph3D()(document.getElementById("graph-container"))
@@ -298,33 +232,83 @@ fetch(firstUrl)
 
         /* keyword-nodes triggern suche, normale nodes öffnen modal */
         if (node.isKeyword) {
-          const url = `http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(node.name)}`;
-          pushHistory(url);
-          loadGraph(url, false);
+          loadGraph(`http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(node.name)}`);
         } else {
           openModal(node);
         }
       });
-
-    updateBackButton();
+    
+    /* initialen graph zur history hinzufügen */
+    pushHistory(initialUrl);
+    
+    setTimeout(() => {
+      Graph.zoomToFit(400, 80);
+    }, 200);
   })
-  .catch(error => console.error("Fehler:s", error));
+  .catch(error => console.error("Fehler beim Laden:", error));
 
 
+/* keyword autocomplete vorbereiten */
+fetch('http://localhost:8000/getKeywordList')
+  .then(response => response.json())
+  .then(data => {
+    const datalist = document.getElementById('keyword-suggestions');
+    (data.keywords || []).forEach(keyword => {
+      const option = document.createElement('option');
+      option.value = keyword;
+      datalist.appendChild(option);
+    });
+  })
+  .catch(error => console.error("Fehler beim Laden der Keyword-Vorschläge:", error));
+
+
+/* keyboard bindings */
 document.addEventListener('keydown', (e) => {
-
-  if (!modal.classList.contains('hidden') && e.key === 'Escape') {
-    closeModal();
+  // ESC - Modal schließen
+  if (e.key === 'Escape') {
+    if (!modal.classList.contains('hidden')) {
+      closeModal();
+    }
   }
-
-  if (modal.classList.contains('hidden') && e.key === ' ') {
-    e.preventDefault();
-    btnZoomReset.click();
+  
+  // SPACE - Zoom reset
+  if (e.key === ' ' || e.code === 'Space') {
+    if (document.activeElement.tagName !== 'INPUT' && Graph) {
+      e.preventDefault();
+      Graph.zoomToFit(400, 80);
+    }
   }
-
-  if (modal.classList.contains('hidden') && e.key === 'ArrowLeft') {
-    e.preventDefault();
-    btnBack.click();
+  
+  // LEFTARROW - Zurück
+  if (e.key === 'ArrowLeft') {
+    if (document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      if (graphHistory.length > 1) {
+        goBack();
+      }
+    }
   }
-
 });
+
+/* query-parameter handling */
+(function() {
+  const params = new URLSearchParams(window.location.search);
+
+  // KEYWORD → wie Keyword-Suche
+  if (params.has('keyword')) {
+    const kw = params.get('keyword').trim();
+    if (kw) {
+      loadGraph(`http://localhost:8000/getExercisesByKeyword/${encodeURIComponent(kw)}`);
+    }
+    return; // verhindert initialLoad
+  }
+
+  // NODE → wie Node-Klick (Subgraph laden)
+  if (params.has('node')) {
+    const id = params.get('node').trim();
+    if (id) {
+      loadGraph(`http://localhost:8000/getPathToExercise/${encodeURIComponent(id)}`);
+    }
+    return;
+  }
+})();
