@@ -5,10 +5,12 @@
 ## Features
 
 - **3D Force Graph** - Interactive 3D visualization of all learning resources
+- **ToDo Graph - A Subgraph including all your marked To-Do Nodes
 - **Keyword Search** - Find exercises by keywords
 - **Keyword Graph** - Visualize all available keywords as a graph
 - **Node Details** - Click on nodes for details (topic, keywords, dependencies)
 - **Subgraph Exploration** - Load relevant subgraphs for individual exercises
+- **Statistics - including all nodes/keywords and individually marked nodes
 
 ## Technology
 
@@ -18,11 +20,11 @@
 
 ## Keyboard Bindings
 
-- LEFTARROW to go one step back
+- LEFTARROW or CTRL+Z to go one step back
 - SPACE to reset the view automatically
 - ESC to exit the node-details
+- F1 to open the help modal
 
 ## To-Do
-- Topic search
-- Custom user experience
-- Learnpath-Customizer
+- Identity features
+- more individual possibilities
