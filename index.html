@@ -14,9 +14,14 @@
   <div id="menu">
   Welcome to STEMgraph. Choose your destination.
   </br>
+  </br>
   <a href="http://localhost:8010">Whole Graph</a>
+  <a href="#" id="btn-show-todo">To-Do Graph</a>
   <a href="#" id="btn-show-keywords">Keywords</a>
   <a href="#" id="btn-show-keywordcloud">Keyword Cloud</a>
+  <a href="#" id="btn-show-statistics">Statistics</a>
+  <a href="#" id="btn-show-help">Help</a>
+</br>
 <form id="search-form">
     <input type="text" id="keywordsearch" list="keyword-suggestions" placeholder="Find Keyword" required>
     <datalist id="keyword-suggestions"></datalist>
@@ -39,26 +44,87 @@
   <div id="graph-container"></div>
   
   
-  <div id="node-modal" class="hidden">
-    <div class="modal-content">
-      <button id="btn-close">×</button>
-      <h3 id="modal-title">Topic</h3>
-      <div id="modal-meta">
-        <div class="meta-item">
-          <span class="meta-label">ID:</span>
-          <span id="modal-id"></span>
-        </div>
+<div id="node-modal" class="hidden">
+  <div class="modal-content">
+    <button class="btn-close">×</button>
+    <h3 id="modal-title">Topic</h3> 
+    <div class="modal-meta">
+      <div class="meta-item">
+        <span class="meta-label">ID:</span>
+        <span id="modal-id"></span>
+      </div>
+
         <div class="meta-item">
           <span class="meta-label">Keywords:</span>
           <div id="modal-keywords"></div>
         </div>
       </div>
+
+      
       <div class="modal-buttons">
-        <button id="btn-explore">Graphabschnitt erkunden</button>
-        <button id="btn-github">Lektion öffnen</button>
+        <button id="btn-explore">Explore Graph</button>
+        <button id="btn-github">Open lesson</button>
+        <button id="btn-marknode">Mark lesson as completed</button>
+         <button id="btn-todonode">Put lesson on your To-Do list</button>
       </div>
     </div>
   </div>
+
+  <div id="statistics-modal" class="hidden">
+    <div class="modal-content">
+      <button class="btn-close">x</button>
+      <h3 class="modal-title">Statistics</h3>
+      <div class="modal-meta">
+    <div class="meta-item">
+      <p><b>General</b></p>
+      <p>
+      <ul>
+      <li>All lessons: <span id="stat-node-count">0</span></li>
+      <li>All Keywords: <span id="stat-keyword-count">0</span></li>
+      </ul>
+    </p>
+    <p><b>Personal:</b></p>
+    <ul>
+      <li>Lessons completed: <span id="stat-marked-count">0</span></li>
+      <li>To-Do lessons: <span id="stat-todo-count">0</span></li>
+    </ul>
+
+    </div>
+
+       </div>
+      </div>
+    </div>
+
+
+<div id="help-modal" class="hidden">
+  <div class="modal-content">
+    <button class="btn-close">×</button>
+    <h3 class="modal-title">STEMgraph Quick Guide</h3>
+    <div class="modal-meta">
+      <p><b>Navigation:</b></p>
+      <ul>
+        <li>Left mouse button + move: Rotate camera</li>
+        <li>Left click + drag: Move nodes</li>
+        <li>Scroll wheel: Zoom</li>
+        <li>Right click + drag: Pan view</li>
+      </ul>
+      <p><b>Node interaction:</b></p>
+      <ul>
+        <li>Click node: Show details</li>
+        <li>Completed lessons can be marked and appear blue</li>
+        <li>To-Do lessons can be marked and appear yellow</li>
+      </ul>
+      <p>Additional keys:</p>
+      <ul>
+        <li>Arrow Left: Go back one step</li>
+        <li>SPACE: Reset view</li>
+        <li>F1: View this help (duh)</li>
+      </ul>
+    </div>
+  </div>
+</div>  
+
+
 
   <script src="parser.js"></script>
   <script src="script.js"></script>

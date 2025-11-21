@@ -23,13 +23,15 @@ h1 {
   top: 80px;
   left: 10px;
   width: 220px;
-  background: rgba(30, 30, 30, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
   padding: 14px 16px 6px 16px;
   color: #ddd;
   z-index: 10;
   font-size: 12px;
+  backdrop-filter: blur(6px);
+  background: rgba(20, 20, 20, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
 }
 
 #menu a {
@@ -37,9 +39,16 @@ h1 {
   color: #fff;
   text-decoration: none;
   text-align: center;
-  margin: 8px 0;
+  margin: 6px 0;
   font-weight: bold;
   font-size: 15px;
+  border-radius: 6px;
+  transition: transform 0.2s;
+}
+
+#menu a:hover {
+  transform: scale(1.05);
+  text-shadow: 0 0 8px #d7cbcb;
 }
 
 #menu a.disabled {
@@ -56,15 +65,18 @@ h1 {
 
 #menu-table td a {
   display: block;
-  margin: 0;      /* wichtig, fix. sonst verrutscht die tabelle!! */
+  margin: 0;      /* don't fuck with this. sonst verrutscht die tabelle!! */
   padding: 2px 0;
   font-size: 13px;
 }
+
 
 #search-form {
   display: flex;
   gap: 8px;
   margin-top: 12px;
+  box-sizing: border-box;   /* wichtig! fix */
+  width: 100%;  
 }
 
 #keywordsearch {
@@ -73,6 +85,8 @@ h1 {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
+  box-sizing: border-box;   /* wichtig! fix */
+  min-width: 0; 
   color: #fff;
   font-size: 13px;
 }
@@ -91,7 +105,9 @@ h1 {
   background: rgba(80, 80, 80, 0.9);
 }
 
-#node-modal {
+#node-modal,
+#statistics-modal,
+#help-modal {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
@@ -101,27 +117,30 @@ h1 {
   z-index: 1000;
 }
 
-#node-modal.hidden {
+#node-modal.hidden,
+#statistics-modal.hidden,
+#help-modal.hidden {
   display: none;
 }
 
 .modal-content {
   background: rgba(30, 30, 30, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  padding: 32px;
-  min-width: 400px;
+  border-radius: 20px;
+  padding: 36px;           
+  min-width: 420px;        
   position: relative;
   color: #fff;
+  margin: 40px;             
 }
 
-#modal-title {
+.modal-title {
   font-size: 24px;
   margin: 0 0 20px 0;
   color: #fff;
 }
 
-#modal-meta {
+.modal-meta {
   margin-bottom: 24px;
   color: #fff;
 }
@@ -166,7 +185,7 @@ h1 {
   background: rgba(80, 80, 80, 0.9);
 }
 
-#btn-close {
+.btn-close {
   position: absolute;
   top: 16px;
   right: 16px;
@@ -177,6 +196,6 @@ h1 {
   cursor: pointer;
 }
 
-#btn-close:hover {
+.btn-close:hover {
   color: #fff;
 }

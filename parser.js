@@ -52,9 +52,25 @@ function parseGraphData(data) {
 
 function loadGraph(url, addToHistory = true) {
   fetch(url)
-    .then(r => r.json())
+    .then(response => {
+      if (!response.ok) {
+        if (response.status === 404) {
+          alert("Keine Ergebnisse gefunden. Bitte überprüfe deine Suchanfrage.");
+        } else {
+          alert("Fehler beim Laden der Daten von der API.");
+        }
+        return null;
+      }
+      return response.json();
+    })
     .then(data => {
+      if (!data) return;
+      
       const graphData = parseGraphData(data);
+      // FARBMUSTER FÜR ALLE NORMALEN GRAPHS
+      Graph.nodeAutoColorBy(null);
+      Graph.nodeColor(getNodeColor);
+
       Graph.nodeVal(() => 1);
       Graph.graphData(graphData);
       
@@ -63,5 +79,8 @@ function loadGraph(url, addToHistory = true) {
       }, 100);
 
       if (addToHistory) pushHistory(url);
+    })
+    .catch(error => {
+      console.error("Fehler beim Laden:", error);
     });
 }
